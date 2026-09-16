@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="zh-Hant"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>夜澤親密度・月預算追蹤器 v3</title>
+<style>
+:root{--bg:#f7f7fb;--card:#fff;--text:#20242c;--muted:#6b7280;--line:#e5e7eb}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",sans-serif}
+main{max-width:1080px;margin:auto;padding:24px}h1{margin:0 0 5px;font-size:27px}h2{font-size:17px;margin:0 0 12px}.muted{font-size:13px;color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(285px,1fr));gap:16px}.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;margin-bottom:16px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}label{display:block;font-size:13px;margin:9px 0 4px}
+input,select,button,textarea{width:100%;padding:10px 11px;border:1px solid #d1d5db;border-radius:10px;background:#fff;font:inherit;font-size:14px}
+textarea{min-height:70px;resize:vertical}button{font-weight:650;cursor:pointer}.primary{background:#111827;color:#fff}.big{font-size:27px;font-weight:780}
+.bar{height:18px;border-radius:999px;background:#e5e7eb;overflow:hidden;margin:9px 0}.fill{height:100%;background:#111827;transition:.2s}
+.checks{display:grid;grid-template-columns:repeat(auto-fit,minmax(235px,1fr));gap:8px}.check{display:flex;gap:7px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:8px}.check input{width:auto}
+.notice{padding:11px;border-radius:10px;background:#f3f4f6;font-size:13px}.level{display:flex;justify-content:space-between;gap:14px;align-items:end}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}th{color:var(--muted)}
+.tag{display:inline-block;padding:3px 7px;border:1px solid var(--line);border-radius:999px;font-size:12px;margin-right:4px}.danger{color:#b91c1c}
+</style></head>
+<body><main>
+<h1>夜澤親密度・月預算追蹤器</h1>
+<div class="muted">每月動態控制親密度與鑽石；即時顯示燈牌等級，並另外留下點歌／大禮物事件紀錄。</div><br>
+
+<div class="grid">
+<section class="card">
+<h2>目前基準</h2>
+<div class="row"><div><label>2026/9/16 起始總親密度</label><input id="baseInt" type="number" value="0"></div>
+<div><label>追蹤起始日</label><input id="baseDate" type="date" value="2026-09-16"></div></div>
+<div class="notice">9/16～9/30 預設不刷。仍可每天記錄免費掛滿時長 +190。</div>
+</section>
+
+<section class="card">
+<h2>即時燈牌</h2>
+<div class="level"><div><div class="big" id="levelNow">Lv. —</div><div class="muted">目前總親密 <span id="totalInt">0</span></div></div><div id="levelPct">—</div></div>
+<div class="bar"><div class="fill" id="levelFill" style="width:0"></div></div>
+<div id="levelNext" class="muted"></div>
+<label>等級門檻設定（可自行修正）</label>
+<div class="row"><div><input id="currentLevel" type="number" value="9" min="1"></div><div><input id="nextThreshold" type="number" value="20000" min="0"></div></div>
+<div class="muted">左：你目前已知等級；右：下一級所需「總親密度」。如果之後知道各級門檻，可在下面新增。</div>
+<label>自訂門檻（格式：等級:總親密，一行一個）</label>
+<textarea id="thresholds">10:20000
+13:140000
+16:418900</textarea>
+<button class="primary" onclick="saveBase()">儲存基準／門檻</button>
+</section>
+
+<section class="card">
+<h2>月份設定</h2>
+<label>查看月份</label><input id="month" type="month" value="2026-09" onchange="loadMonth()">
+<div class="row"><div><label>本月預計新增親密（自動計算）</label><input id="monthGoal" type="number" value="0" readonly></div>
+<div><label>本月鑽石上限</label><input id="monthBudget" type="number" value="0"></div></div>
+<div class="muted" style="margin-top:10px">只填下面的「本月打算怎麼做」，目標親密會自動生成；原本的每日紀錄、燈牌等級與特殊事件架構不變。</div>
+<div class="row"><div><label>掛滿時長天數</label><input id="planWatch" type="number" value="0" min="0" oninput="previewPlan()"></div>
+<div><label>1鑽燈牌天數（102親密/天）</label><input id="planLamp1" type="number" value="0" min="0" oninput="previewPlan()"></div></div>
+<div class="row"><div><label>9鑽燈牌天數（318親密/天）</label><input id="planLamp9" type="number" value="0" min="0" oninput="previewPlan()"></div>
+<div><label>陪伴一階段天數（748親密/天）</label><input id="planS1" type="number" value="0" min="0" oninput="previewPlan()"></div></div>
+<div class="row"><div><label>陪伴二階段天數</label><input id="planS2" type="number" value="0" min="0" oninput="previewPlan()"></div>
+<div><label>二階段平均基礎親密</label><input id="planS2Avg" type="number" value="800" min="0" oninput="previewPlan()"></div></div>
+<div class="row"><div><label>本月預計點歌次數</label><input id="planSongs" type="number" value="0" min="0" oninput="previewPlan()"></div>
+<div><label>點歌時額外99鑽次數</label><input id="planExtra99" type="number" value="0" min="0" oninput="previewPlan()"></div></div>
+<div class="row"><div><label>星守次數</label><input id="planStar" type="number" value="0" min="0" oninput="previewPlan()"></div>
+<div><label>大禮物／其他夜澤鑽石</label><input id="planGiftD" type="number" value="0" min="0" oninput="previewPlan()"></div></div>
+<div class="row"><div><label>大禮物額外活動親密</label><input id="planGiftBonus" type="number" value="0" min="0" oninput="previewPlan()"></div>
+<div><label>椰子水1鑽燈牌天數</label><input id="planCoco" type="number" value="0" min="0" oninput="previewPlan()"></div></div>
+<div class="notice" id="planPreview" style="margin-top:10px">本月計畫：0 鑽／0 親密</div>
+<button class="primary" onclick="saveMonth()">儲存本月設定</button>
+</section>
+</div>
+
+<div class="grid">
+<section class="card"><h2>本月親密進度</h2><div class="big" id="gain">0</div><div class="muted">已新增 / <span id="goalText">0</span></div>
+<div class="bar"><div class="fill" id="goalFill"></div></div><div id="pace" class="muted"></div></section>
+<section class="card"><h2>本月鑽石</h2><div class="big" id="spent">0 鑽</div><div class="muted">已花 / <span id="budgetText">0</span> 鑽</div>
+<div class="bar"><div class="fill" id="budgetFill"></div></div><div id="budgetMsg" class="muted"></div></section>
+<section class="card"><h2>本月特殊事件</h2><div class="big" id="eventCount">0 次</div><div class="muted">點歌、大禮物與其他值得記的消費</div></section>
+</div>
+
+<section class="card">
+<h2>新增今日紀錄</h2>
+<div class="row"><div><label>日期</label><input id="date" type="date" value="2026-09-16"></div>
+<div><label>陪伴二階段「活動基礎親密」</label><input id="s2base" type="number" value="800" placeholder="例如 700、835、900"></div></div>
+<div class="muted">二階段由你每天自行輸入實際值；勾選後再自動加 108×2＝216 的鑽石親密。</div>
+
+<div class="checks" style="margin-top:12px">
+<label class="check"><input id="lamp1" type="checkbox">1 鑽燈牌：100+2＝102</label>
+<label class="check"><input id="lamp" type="checkbox">9 鑽燈牌：300+18＝318</label>
+<label class="check"><input id="s1" type="checkbox">陪伴一階段 99 鑽：550+198＝748</label>
+<label class="check"><input id="s2" type="checkbox">陪伴二階段 108 鑽</label>
+<label class="check"><input id="watch" type="checkbox" checked>掛滿時長：+190</label>
+<label class="check"><input id="songLamp" type="checkbox">點歌日：燈牌 9→99（額外90鑽/+380）</label>
+<label class="check"><input id="extra99" type="checkbox">額外99鑽：300+198＝498</label>
+<label class="check"><input id="star" type="checkbox">星守：1,280鑽/+2,560</label>
+<label class="check"><input id="coco" type="checkbox">椰子水：1鑽</label>
+</div>
+
+<div class="row"><div><label>其他送夜澤鑽石</label><input id="otherD" type="number" value="0"></div>
+<div><label>其他活動額外親密</label><input id="otherI" type="number" value="0"></div></div>
+
+<h2 style="margin-top:18px">特殊事件小記</h2>
+<div class="row"><div><label>事件類型</label><select id="eventType"><option value="">無</option><option>點歌</option><option>大禮物</option><option>活動</option><option>紀念日</option><option>其他</option></select></div>
+<div><label>事件名稱</label><input id="eventName" placeholder="例如：點《歌名》／生日禮物"></div></div>
+<label>備註</label><input id="note" placeholder="想記價格、原因、當天互動都可以">
+<br><button class="primary" onclick="addDay()">加入／更新這一天</button>
+</section>
+
+<section class="card"><h2>本月每日紀錄</h2><div style="overflow:auto"><table><thead><tr><th>日期</th><th>鑽石</th><th>親密+</th><th>總親密</th><th>燈牌</th><th></th></tr></thead><tbody id="rows"></tbody></table></div></section>
+
+<section class="card"><h2>點歌／大禮物紀錄</h2><div style="overflow:auto"><table><thead><tr><th>日期</th><th>類型</th><th>事件</th><th>當日鑽石</th><th>備註</th></tr></thead><tbody id="events"></tbody></table></div></section>
+
+<script>
+const $=id=>document.getElementById(id);
+let db=JSON.parse(localStorage.getItem("yezheTrackerV5")||'{"baseInt":0,"baseDate":"2026-09-16","thresholdText":"10:20000\\n13:140000\\n16:418900","months":{"2026-09":{"goal":0,"budget":0,"plan":{}}},"days":[]}');
+function save(){localStorage.setItem("yezheTrackerV5",JSON.stringify(db))}
+function parseThresholds(){
+ let arr=[];($("thresholds").value||"").split(/\n/).forEach(line=>{let [l,t]=line.split(":").map(Number);if(l&&Number.isFinite(t))arr.push({level:l,t:t})});
+ return arr.sort((a,b)=>a.t-b.t)
+}
+function getLevel(total){
+ let arr=parseThresholds(), level=+$("currentLevel").value||1, prev=0,next=null;
+ for(let x of arr){if(total>=x.t){level=Math.max(level,x.level);prev=x.t}else if(!next){next=x;break}}
+ if(!next){let manual=+$("nextThreshold").value;if(manual>total)next={level:level+1,t:manual}}
+ return {level,prev,next}
+}
+function saveBase(){db.baseInt=+$("baseInt").value||0;db.baseDate=$("baseDate").value;db.thresholdText=$("thresholds").value;db.currentLevel=+$("currentLevel").value||1;db.nextThreshold=+$("nextThreshold").value||0;save();render()}
+function getPlan(){
+ return {watch:+$("planWatch").value||0,lamp1:+$("planLamp1").value||0,lamp9:+$("planLamp9").value||0,s1:+$("planS1").value||0,s2:+$("planS2").value||0,s2avg:+$("planS2Avg").value||0,songs:+$("planSongs").value||0,extra99:+$("planExtra99").value||0,star:+$("planStar").value||0,giftD:+$("planGiftD").value||0,giftBonus:+$("planGiftBonus").value||0,coco:+$("planCoco").value||0}
+}
+function planTotals(p){
+ let d=0,i=0;
+ i+=p.watch*190;
+ d+=p.lamp1;i+=p.lamp1*102;
+ d+=p.lamp9*9;i+=p.lamp9*318;
+ d+=p.s1*99;i+=p.s1*748;
+ d+=p.s2*108;i+=p.s2*(p.s2avg+216);
+ d+=p.songs*90;i+=p.songs*380;
+ d+=p.extra99*99;i+=p.extra99*498;
+ d+=p.star*1280;i+=p.star*2560;
+ d+=p.giftD;i+=p.giftD*2+p.giftBonus;
+ d+=p.coco;
+ return {d,i}
+}
+function previewPlan(){
+ let t=planTotals(getPlan());$("monthGoal").value=t.i;$("planPreview").innerHTML=`本月計畫：<b>${t.d.toLocaleString()} 鑽</b>／預計新增 <b>${t.i.toLocaleString()} 親密</b>`;
+}
+function saveMonth(){let m=$("month").value,p=getPlan(),t=planTotals(p);db.months[m]={goal:t.i,budget:+$("monthBudget").value||0,plan:p};saveBase();save();render()}
+function loadMonth(){
+ let s=db.months[$("month").value]||{goal:0,budget:0,plan:{}},p=s.plan||{};
+ $("monthBudget").value=s.budget||0;
+ $("planWatch").value=p.watch||0;$("planLamp1").value=p.lamp1||0;$("planLamp9").value=p.lamp9||0;$("planS1").value=p.s1||0;$("planS2").value=p.s2||0;$("planS2Avg").value=p.s2avg??800;$("planSongs").value=p.songs||0;$("planExtra99").value=p.extra99||0;$("planStar").value=p.star||0;$("planGiftD").value=p.giftD||0;$("planGiftBonus").value=p.giftBonus||0;$("planCoco").value=p.coco||0;
+ previewPlan();render()
+}
+function addDay(){
+ let d=0,i=0;
+ if($("lamp1").checked){d+=1;i+=102}
+ if($("lamp").checked){d+=9;i+=318}
+ if($("s1").checked){d+=99;i+=748}
+ if($("s2").checked){d+=108;i+=(+$("s2base").value||0)+216}
+ if($("watch").checked)i+=190;
+ if($("songLamp").checked){d+=90;i+=380}
+ if($("extra99").checked){d+=99;i+=498}
+ if($("star").checked){d+=1280;i+=2560}
+ if($("coco").checked)d+=1;
+ let od=+$("otherD").value||0, oi=+$("otherI").value||0; d+=od;i+=od*2+oi;
+ let date=$("date").value;if(!date)return;
+ let rec={date,diamonds:d,intimacy:i,eventType:$("eventType").value,eventName:$("eventName").value,note:$("note").value,s2base:$("s2").checked?(+$("s2base").value||0):null};
+ db.days=db.days.filter(x=>x.date!==date);db.days.push(rec);db.days.sort((a,b)=>a.date.localeCompare(b.date));save();render()
+}
+function delDay(date){db.days=db.days.filter(x=>x.date!==date);save();render()}
+function render(){
+ $("baseInt").value=db.baseInt||0;$("baseDate").value=db.baseDate||"2026-09-16";$("thresholds").value=db.thresholdText||"10:20000\n13:140000\n16:418900";$("currentLevel").value=db.currentLevel||9;$("nextThreshold").value=db.nextThreshold||20000;
+ let total=(db.baseInt||0)+db.days.reduce((a,x)=>a+x.intimacy,0),lv=getLevel(total);
+ $("totalInt").textContent=total.toLocaleString();$("levelNow").textContent="Lv. "+lv.level;
+ if(lv.next){let denom=Math.max(1,lv.next.t-lv.prev),pct=Math.max(0,Math.min(100,(total-lv.prev)/denom*100));$("levelFill").style.width=pct+"%";$("levelPct").textContent=pct.toFixed(1)+"%";$("levelNext").textContent=`距 Lv.${lv.next.level} 還差 ${Math.max(0,lv.next.t-total).toLocaleString()} 親密（門檻 ${lv.next.t.toLocaleString()}）`}
+ else{$("levelFill").style.width="100%";$("levelPct").textContent="—";$("levelNext").textContent="請新增下一級門檻以繼續顯示進度。"}
+ let m=$("month").value,s=db.months[m]||{goal:0,budget:0,plan:{}},days=db.days.filter(x=>x.date.startsWith(m)),gain=days.reduce((a,x)=>a+x.intimacy,0),spent=days.reduce((a,x)=>a+x.diamonds,0);
+ $("gain").textContent=gain.toLocaleString();$("goalText").textContent=s.goal.toLocaleString();$("spent").textContent=spent.toLocaleString()+" 鑽";$("budgetText").textContent=s.budget.toLocaleString();
+ $("goalFill").style.width=(s.goal?Math.min(100,gain/s.goal*100):0)+"%";$("budgetFill").style.width=(s.budget?Math.min(100,spent/s.budget*100):0)+"%";
+ let [y,mo]=m.split("-").map(Number),last=new Date(y,mo,0).getDate(),now=new Date(),day=(now.getFullYear()==y&&now.getMonth()+1==mo)?now.getDate():1,remain=Math.max(1,last-day);
+ $("pace").textContent=s.goal?`還差 ${Math.max(0,s.goal-gain).toLocaleString()}；剩餘期間平均約 ${Math.ceil(Math.max(0,s.goal-gain)/remain).toLocaleString()} 親密／天。`:"本月尚未設定親密目標。";
+ $("budgetMsg").innerHTML=s.budget?`剩餘 ${Math.max(0,s.budget-spent).toLocaleString()} 鑽${spent>s.budget?'；<span class="danger">已超出預算</span>':''}`:(spent?'<span class="danger">本月預算為 0，但已有鑽石支出。</span>':'本月預算為 0：不刷鑽石。');
+ let ev=days.filter(x=>x.eventType||x.eventName);$("eventCount").textContent=ev.length+" 次";
+ let running=(db.baseInt||0)+db.days.filter(x=>x.date<m+"-01").reduce((a,x)=>a+x.intimacy,0);
+ $("rows").innerHTML=days.map(x=>{running+=x.intimacy;let l=getLevel(running).level;return `<tr><td>${x.date}</td><td>${x.diamonds.toLocaleString()}</td><td>+${x.intimacy.toLocaleString()}</td><td>${running.toLocaleString()}</td><td>Lv.${l}</td><td><button class="danger" onclick="delDay('${x.date}')">刪</button></td></tr>`}).join("")||'<tr><td colspan="6" class="muted">尚無紀錄</td></tr>';
+ $("events").innerHTML=ev.map(x=>`<tr><td>${x.date}</td><td><span class="tag">${x.eventType||"紀錄"}</span></td><td>${x.eventName||"—"}</td><td>${x.diamonds.toLocaleString()}</td><td>${x.note||"—"}</td></tr>`).join("")||'<tr><td colspan="5" class="muted">本月還沒有特殊事件。</td></tr>';
+}
+loadMonth();
+</script></main></body></html>
