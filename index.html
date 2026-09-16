@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="zh-Hant"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>夜澤親密度・月預算追蹤器 v7</title>
+<title>夜澤親密度・月預算追蹤器 v8</title>
 <style>
 :root{--bg:#f7f7fb;--card:#fff;--text:#20242c;--muted:#6b7280;--line:#e5e7eb}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",sans-serif}
@@ -60,7 +60,8 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px 6px;b
 <div class="row"><div><label>掛滿時長天數</label><input id="planWatch" type="number" value="0" min="0" oninput="previewPlan()"></div>
 <div><label>1鑽燈牌天數（102親密/天）</label><input id="planLamp1" type="number" value="0" min="0" oninput="previewPlan()"></div></div>
 <div class="row"><div><label>9鑽燈牌天數（318親密/天）</label><input id="planLamp9" type="number" value="0" min="0" oninput="previewPlan()"></div>
-<div><label>陪伴一階段天數（748親密/天）</label><input id="planS1" type="number" value="0" min="0" oninput="previewPlan()"></div></div>
+<div><label>99鑽燈牌天數（500+198＝698親密/天）</label><input id="planLamp99" type="number" value="0" min="0" oninput="previewPlan()"></div></div>
+<div><label>陪伴一階段天數（748親密/天）</label><input id="planS1" type="number" value="0" min="0" oninput="previewPlan()"></div>
 <div class="row"><div><label>陪伴二階段天數</label><input id="planS2" type="number" value="0" min="0" oninput="previewPlan()"></div>
 <div><label>二階段平均基礎親密</label><input id="planS2Avg" type="number" value="800" min="0" oninput="previewPlan()"></div></div>
 <div class="row"><div><label>本月預計點歌次數</label><input id="planSongs" type="number" value="0" min="0" oninput="previewPlan()"></div>
@@ -96,10 +97,11 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px 6px;b
 <div class="checks" style="margin-top:12px">
 <label class="check"><input id="lamp1" type="checkbox">1 鑽燈牌：100+2＝102</label>
 <label class="check"><input id="lamp" type="checkbox">9 鑽燈牌：300+18＝318</label>
+<label class="check"><input id="lamp99" type="checkbox">99 鑽燈牌：500+198＝698</label>
 <label class="check"><input id="s1" type="checkbox">陪伴一階段 99 鑽：550+198＝748</label>
 <label class="check"><input id="s2" type="checkbox">陪伴二階段 108 鑽</label>
 <label class="check"><input id="watch" type="checkbox" checked>掛滿時長：+190</label>
-<label class="check"><input id="songLamp" type="checkbox">點歌日：燈牌 9→99（額外90鑽/+380）</label>
+<label class="check"><input id="songLamp" type="checkbox">點歌日若原本已算9鑽燈牌：升99（只加差額90鑽/+380）</label>
 <label class="check"><input id="extra99" type="checkbox">額外99鑽：300+198＝498</label>
 <label class="check"><input id="star" type="checkbox">星守：1,280鑽/+2,560</label>
 
@@ -121,8 +123,8 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px 6px;b
 
 <script>
 const $=id=>document.getElementById(id);
-let db=JSON.parse(localStorage.getItem("yezheTrackerV7")||'{"baseInt":0,"baseDate":"2026-09-16","thresholdText":"10:10900\\n11:32000\\n12:42100\\n13:57300\\n14:73200\\n15:97100\\n16:130000\\n17:170000\\n18:220000\\n19:290000\\n20:380000","months":{"2026-09":{"goal":0,"budget":0,"plan":{}}},"days":[]}');
-function save(){localStorage.setItem("yezheTrackerV7",JSON.stringify(db))}
+let db=JSON.parse(localStorage.getItem("yezheTrackerV8")||'{"baseInt":0,"baseDate":"2026-09-16","thresholdText":"10:10900\\n11:32000\\n12:42100\\n13:57300\\n14:73200\\n15:97100\\n16:130000\\n17:170000\\n18:220000\\n19:290000\\n20:380000","months":{"2026-09":{"goal":0,"budget":0,"plan":{}}},"days":[]}');
+function save(){localStorage.setItem("yezheTrackerV8",JSON.stringify(db))}
 function parseThresholds(){
  let arr=[];($("thresholds").value||"").split(/\n/).forEach(line=>{let [l,t]=line.split(":").map(Number);if(l&&Number.isFinite(t))arr.push({level:l,t:t})});
  return arr.sort((a,b)=>a.t-b.t)
@@ -135,13 +137,14 @@ function getLevel(total){
 }
 function saveBase(){db.baseInt=+$("baseInt").value||0;db.baseDate=$("baseDate").value;db.thresholdText=$("thresholds").value;db.currentLevel=+$("currentLevel").value||1;db.nextThreshold=+$("nextThreshold").value||0;save();render()}
 function getPlan(){
- return {watch:+$("planWatch").value||0,lamp1:+$("planLamp1").value||0,lamp9:+$("planLamp9").value||0,s1:+$("planS1").value||0,s2:+$("planS2").value||0,s2avg:+$("planS2Avg").value||0,songs:+$("planSongs").value||0,extra99:+$("planExtra99").value||0,star:+$("planStar").value||0,giftD:+$("planGiftD").value||0,giftBonus:+$("planGiftBonus").value||0}
+ return {watch:+$("planWatch").value||0,lamp1:+$("planLamp1").value||0,lamp9:+$("planLamp9").value||0,lamp99:+$("planLamp99").value||0,s1:+$("planS1").value||0,s2:+$("planS2").value||0,s2avg:+$("planS2Avg").value||0,songs:+$("planSongs").value||0,extra99:+$("planExtra99").value||0,star:+$("planStar").value||0,giftD:+$("planGiftD").value||0,giftBonus:+$("planGiftBonus").value||0}
 }
 function planTotals(p){
  let d=0,i=0;
  i+=p.watch*190;
  d+=p.lamp1;i+=p.lamp1*102;
  d+=p.lamp9*9;i+=p.lamp9*318;
+ d+=(p.lamp99||0)*99;i+=(p.lamp99||0)*698;
  d+=p.s1*99;i+=p.s1*748;
  d+=p.s2*108;i+=p.s2*(p.s2avg+216);
  d+=p.songs*90;i+=p.songs*380;
@@ -158,13 +161,14 @@ function saveMonth(){let m=$("month").value,p=getPlan(),t=planTotals(p);db.month
 function loadMonth(){
  let s=db.months[$("month").value]||{goal:0,budget:0,plan:{}},p=s.plan||{};
  $("monthBudget").value=s.budget||0;
- $("planWatch").value=p.watch||0;$("planLamp1").value=p.lamp1||0;$("planLamp9").value=p.lamp9||0;$("planS1").value=p.s1||0;$("planS2").value=p.s2||0;$("planS2Avg").value=p.s2avg??800;$("planSongs").value=p.songs||0;$("planExtra99").value=p.extra99||0;$("planStar").value=p.star||0;$("planGiftD").value=p.giftD||0;$("planGiftBonus").value=p.giftBonus||0;
+ $("planWatch").value=p.watch||0;$("planLamp1").value=p.lamp1||0;$("planLamp9").value=p.lamp9||0;$("planLamp99").value=p.lamp99||0;$("planS1").value=p.s1||0;$("planS2").value=p.s2||0;$("planS2Avg").value=p.s2avg??800;$("planSongs").value=p.songs||0;$("planExtra99").value=p.extra99||0;$("planStar").value=p.star||0;$("planGiftD").value=p.giftD||0;$("planGiftBonus").value=p.giftBonus||0;
  previewPlan();render()
 }
 function addDay(){
  let d=0,i=0;
  if($("lamp1").checked){d+=1;i+=102}
  if($("lamp").checked){d+=9;i+=318}
+ if($("lamp99").checked){d+=99;i+=698}
  if($("s1").checked){d+=99;i+=748}
  if($("s2").checked){d+=108;i+=(+$("s2base").value||0)+216}
  if($("watch").checked)i+=190;
