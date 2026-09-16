@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="zh-Hant"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>夜澤親密度・月預算追蹤器 v3</title>
+<title>夜澤親密度・月預算追蹤器 v7</title>
 <style>
 :root{--bg:#f7f7fb;--card:#fff;--text:#20242c;--muted:#6b7280;--line:#e5e7eb}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",sans-serif}
@@ -34,12 +34,20 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px 6px;b
 <div class="bar"><div class="fill" id="levelFill" style="width:0"></div></div>
 <div id="levelNext" class="muted"></div>
 <label>等級門檻設定（可自行修正）</label>
-<div class="row"><div><input id="currentLevel" type="number" value="9" min="1"></div><div><input id="nextThreshold" type="number" value="20000" min="0"></div></div>
+<div class="row"><div><input id="currentLevel" type="number" value="9" min="1"></div><div><input id="nextThreshold" type="number" value="10900" min="0"></div></div>
 <div class="muted">左：你目前已知等級；右：下一級所需「總親密度」。如果之後知道各級門檻，可在下面新增。</div>
 <label>自訂門檻（格式：等級:總親密，一行一個）</label>
-<textarea id="thresholds">10:20000
-13:140000
-16:418900</textarea>
+<textarea id="thresholds">10:10900
+11:32000
+12:42100
+13:57300
+14:73200
+15:97100
+16:130000
+17:170000
+18:220000
+19:290000
+20:380000</textarea>
 <button class="primary" onclick="saveBase()">儲存基準／門檻</button>
 </section>
 
@@ -59,8 +67,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px 6px;b
 <div><label>點歌時額外99鑽次數</label><input id="planExtra99" type="number" value="0" min="0" oninput="previewPlan()"></div></div>
 <div class="row"><div><label>星守次數</label><input id="planStar" type="number" value="0" min="0" oninput="previewPlan()"></div>
 <div><label>大禮物／其他夜澤鑽石</label><input id="planGiftD" type="number" value="0" min="0" oninput="previewPlan()"></div></div>
-<div class="row"><div><label>大禮物額外活動親密</label><input id="planGiftBonus" type="number" value="0" min="0" oninput="previewPlan()"></div>
-<div><label>椰子水1鑽燈牌天數</label><input id="planCoco" type="number" value="0" min="0" oninput="previewPlan()"></div></div>
+<div><label>大禮物額外活動親密</label><input id="planGiftBonus" type="number" value="0" min="0" oninput="previewPlan()"></div>
 <div class="notice" id="planPreview" style="margin-top:10px">本月計畫：0 鑽／0 親密</div>
 <button class="primary" onclick="saveMonth()">儲存本月設定</button>
 </section>
@@ -73,6 +80,12 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px 6px;b
 <div class="bar"><div class="fill" id="budgetFill"></div></div><div id="budgetMsg" class="muted"></div></section>
 <section class="card"><h2>本月特殊事件</h2><div class="big" id="eventCount">0 次</div><div class="muted">點歌、大禮物與其他值得記的消費</div></section>
 </div>
+
+<section class="card">
+<h2>預計升級時間</h2>
+<div class="muted">依「目前總親密＋你設定的月計畫平均每日親密」推估。實際每天輸入後，日期會跟著重新計算。</div>
+<div style="overflow:auto;margin-top:10px"><table><thead><tr><th>等級</th><th>門檻</th><th>目前還差</th><th>預計日期</th></tr></thead><tbody id="forecastRows"></tbody></table></div>
+</section>
 
 <section class="card">
 <h2>新增今日紀錄</h2>
@@ -89,7 +102,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px 6px;b
 <label class="check"><input id="songLamp" type="checkbox">點歌日：燈牌 9→99（額外90鑽/+380）</label>
 <label class="check"><input id="extra99" type="checkbox">額外99鑽：300+198＝498</label>
 <label class="check"><input id="star" type="checkbox">星守：1,280鑽/+2,560</label>
-<label class="check"><input id="coco" type="checkbox">椰子水：1鑽</label>
+
 </div>
 
 <div class="row"><div><label>其他送夜澤鑽石</label><input id="otherD" type="number" value="0"></div>
@@ -108,8 +121,8 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px 6px;b
 
 <script>
 const $=id=>document.getElementById(id);
-let db=JSON.parse(localStorage.getItem("yezheTrackerV5")||'{"baseInt":0,"baseDate":"2026-09-16","thresholdText":"10:20000\\n13:140000\\n16:418900","months":{"2026-09":{"goal":0,"budget":0,"plan":{}}},"days":[]}');
-function save(){localStorage.setItem("yezheTrackerV5",JSON.stringify(db))}
+let db=JSON.parse(localStorage.getItem("yezheTrackerV7")||'{"baseInt":0,"baseDate":"2026-09-16","thresholdText":"10:10900\\n11:32000\\n12:42100\\n13:57300\\n14:73200\\n15:97100\\n16:130000\\n17:170000\\n18:220000\\n19:290000\\n20:380000","months":{"2026-09":{"goal":0,"budget":0,"plan":{}}},"days":[]}');
+function save(){localStorage.setItem("yezheTrackerV7",JSON.stringify(db))}
 function parseThresholds(){
  let arr=[];($("thresholds").value||"").split(/\n/).forEach(line=>{let [l,t]=line.split(":").map(Number);if(l&&Number.isFinite(t))arr.push({level:l,t:t})});
  return arr.sort((a,b)=>a.t-b.t)
@@ -122,7 +135,7 @@ function getLevel(total){
 }
 function saveBase(){db.baseInt=+$("baseInt").value||0;db.baseDate=$("baseDate").value;db.thresholdText=$("thresholds").value;db.currentLevel=+$("currentLevel").value||1;db.nextThreshold=+$("nextThreshold").value||0;save();render()}
 function getPlan(){
- return {watch:+$("planWatch").value||0,lamp1:+$("planLamp1").value||0,lamp9:+$("planLamp9").value||0,s1:+$("planS1").value||0,s2:+$("planS2").value||0,s2avg:+$("planS2Avg").value||0,songs:+$("planSongs").value||0,extra99:+$("planExtra99").value||0,star:+$("planStar").value||0,giftD:+$("planGiftD").value||0,giftBonus:+$("planGiftBonus").value||0,coco:+$("planCoco").value||0}
+ return {watch:+$("planWatch").value||0,lamp1:+$("planLamp1").value||0,lamp9:+$("planLamp9").value||0,s1:+$("planS1").value||0,s2:+$("planS2").value||0,s2avg:+$("planS2Avg").value||0,songs:+$("planSongs").value||0,extra99:+$("planExtra99").value||0,star:+$("planStar").value||0,giftD:+$("planGiftD").value||0,giftBonus:+$("planGiftBonus").value||0}
 }
 function planTotals(p){
  let d=0,i=0;
@@ -135,7 +148,7 @@ function planTotals(p){
  d+=p.extra99*99;i+=p.extra99*498;
  d+=p.star*1280;i+=p.star*2560;
  d+=p.giftD;i+=p.giftD*2+p.giftBonus;
- d+=p.coco;
+
  return {d,i}
 }
 function previewPlan(){
@@ -145,7 +158,7 @@ function saveMonth(){let m=$("month").value,p=getPlan(),t=planTotals(p);db.month
 function loadMonth(){
  let s=db.months[$("month").value]||{goal:0,budget:0,plan:{}},p=s.plan||{};
  $("monthBudget").value=s.budget||0;
- $("planWatch").value=p.watch||0;$("planLamp1").value=p.lamp1||0;$("planLamp9").value=p.lamp9||0;$("planS1").value=p.s1||0;$("planS2").value=p.s2||0;$("planS2Avg").value=p.s2avg??800;$("planSongs").value=p.songs||0;$("planExtra99").value=p.extra99||0;$("planStar").value=p.star||0;$("planGiftD").value=p.giftD||0;$("planGiftBonus").value=p.giftBonus||0;$("planCoco").value=p.coco||0;
+ $("planWatch").value=p.watch||0;$("planLamp1").value=p.lamp1||0;$("planLamp9").value=p.lamp9||0;$("planS1").value=p.s1||0;$("planS2").value=p.s2||0;$("planS2Avg").value=p.s2avg??800;$("planSongs").value=p.songs||0;$("planExtra99").value=p.extra99||0;$("planStar").value=p.star||0;$("planGiftD").value=p.giftD||0;$("planGiftBonus").value=p.giftBonus||0;
  previewPlan();render()
 }
 function addDay(){
@@ -158,17 +171,33 @@ function addDay(){
  if($("songLamp").checked){d+=90;i+=380}
  if($("extra99").checked){d+=99;i+=498}
  if($("star").checked){d+=1280;i+=2560}
- if($("coco").checked)d+=1;
+
  let od=+$("otherD").value||0, oi=+$("otherI").value||0; d+=od;i+=od*2+oi;
  let date=$("date").value;if(!date)return;
  let rec={date,diamonds:d,intimacy:i,eventType:$("eventType").value,eventName:$("eventName").value,note:$("note").value,s2base:$("s2").checked?(+$("s2base").value||0):null};
  db.days=db.days.filter(x=>x.date!==date);db.days.push(rec);db.days.sort((a,b)=>a.date.localeCompare(b.date));save();render()
 }
 function delDay(date){db.days=db.days.filter(x=>x.date!==date);save();render()}
+function renderForecast(total){
+ let arr=parseThresholds().filter(x=>x.t>total);
+ let m=$("month").value,s=db.months[m]||{goal:0,budget:0,plan:{}},p=s.plan||{},t=planTotals(p);
+ let [yy,mm]=m.split("-").map(Number),daysInMonth=new Date(yy,mm,0).getDate();
+ let avg=daysInMonth? t.i/daysInMonth : 0;
+ let start=new Date();
+ // If selected planning month is in the future, forecast begins on its first day; otherwise from today.
+ let monthStart=new Date(yy,mm-1,1);
+ if(monthStart>start) start=monthStart;
+ let rows=arr.map(x=>{
+   let gap=x.t-total, date="—";
+   if(avg>0){let need=Math.ceil(gap/avg);let dt=new Date(start);dt.setDate(dt.getDate()+Math.max(0,need-1));date=dt.toLocaleDateString("zh-TW")}
+   return `<tr><td>Lv.${x.level}</td><td>${x.t.toLocaleString()}</td><td>${gap.toLocaleString()}</td><td>${date}</td></tr>`
+ });
+ $("forecastRows").innerHTML=rows.join("")||'<tr><td colspan="4" class="muted">目前沒有更高級門檻。請在上方「自訂門檻」加入等級與總親密度。</td></tr>';
+}
 function render(){
- $("baseInt").value=db.baseInt||0;$("baseDate").value=db.baseDate||"2026-09-16";$("thresholds").value=db.thresholdText||"10:20000\n13:140000\n16:418900";$("currentLevel").value=db.currentLevel||9;$("nextThreshold").value=db.nextThreshold||20000;
+ $("baseInt").value=db.baseInt||0;$("baseDate").value=db.baseDate||"2026-09-16";$("thresholds").value=db.thresholdText||"10:10900\n11:32000\n12:42100\n13:57300\n14:73200\n15:97100\n16:130000\n17:170000\n18:220000\n19:290000\n20:380000";$("currentLevel").value=db.currentLevel||9;$("nextThreshold").value=db.nextThreshold||10900;
  let total=(db.baseInt||0)+db.days.reduce((a,x)=>a+x.intimacy,0),lv=getLevel(total);
- $("totalInt").textContent=total.toLocaleString();$("levelNow").textContent="Lv. "+lv.level;
+ $("totalInt").textContent=total.toLocaleString();$("levelNow").textContent="Lv. "+lv.level;renderForecast(total);
  if(lv.next){let denom=Math.max(1,lv.next.t-lv.prev),pct=Math.max(0,Math.min(100,(total-lv.prev)/denom*100));$("levelFill").style.width=pct+"%";$("levelPct").textContent=pct.toFixed(1)+"%";$("levelNext").textContent=`距 Lv.${lv.next.level} 還差 ${Math.max(0,lv.next.t-total).toLocaleString()} 親密（門檻 ${lv.next.t.toLocaleString()}）`}
  else{$("levelFill").style.width="100%";$("levelPct").textContent="—";$("levelNext").textContent="請新增下一級門檻以繼續顯示進度。"}
  let m=$("month").value,s=db.months[m]||{goal:0,budget:0,plan:{}},days=db.days.filter(x=>x.date.startsWith(m)),gain=days.reduce((a,x)=>a+x.intimacy,0),spent=days.reduce((a,x)=>a+x.diamonds,0);
